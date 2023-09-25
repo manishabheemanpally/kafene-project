@@ -1,35 +1,16 @@
 // login Credentials
 let loginCredentials = localStorage.getItem("loginStatus");
+console.log(loginCredentials)
 if(loginCredentials == null || loginCredentials == "false"){
     location.assign("./home.html");
 }
 
-let tableData = document.getElementById("table-data");
-
-// Creating Table Rows for Phrama Data
-function createTableRow(data) {
-    tableData.innerHTML="";
-  for (let i = 0; i < data.length; i++) {   
-    tableData.innerHTML+= `
-        <tr>
-          <td class="order-id">${data[i].id}</td>
-          <td class="order-customer-name">${data[i].customerName}</td>
-          <td class="order-date">${data[i].orderDate} <br>
-            <span class="order-time">${data[i].orderTime}</span>
-          </td>
-          <td class="order-amount">$${data[i].amount}</td>
-          <td class="order-status">${data[i].orderStatus}</td>
-        </tr>`;
-  }
-  document.getElementById("table-count").innerHTML = `count: ${data.length} `;
-}
-
-// fetching orders data
+// Fetch Order Data API 
 var orderData;
 $.ajax({
-    url: "https://5fc1a1c9cb4d020016fe6b07.mockapi.io/api/v1/orders",
+    url: "https://5fc1a1c9cb4d020016fe6b07.mockapi.io/api/v1/products",
     type: "GET",
-    success: function(response){ // success
+    success: function(response){
         console.log(response);
         orderData = response
         createTableRow(orderData);
@@ -39,37 +20,99 @@ $.ajax({
     }
 })
 
-// Filters Funcationality 
+let tableData = document.getElementById("table-data");
+// Creating Table Rows for Phrama Data
+function createTableRow(data) {
+    tableData.innerHTML="";
+    for (let i = 0; i < data.length; i++) {
+        tableData.innerHTML+= `
+            <tr class="products-table-row">
+                <td class="product-id u-brown">${data[i].id}</td>
+                <td class="product-name">${data[i].medicineName}</td>
+                <td class="product-brand u-brown">${data[i].medicineBrand}</td>
+                <td class="expiry-date">${data[i].expiryDate}</td>
+                <td class="unit-price u-brown">$${data[i].unitPrice}</td>
+                <td class="product-stock u-brown">${data[i].stock}</td>
+            </tr>`;
+  }
+  document.getElementById("table-count").innerHTML = `count: ${data.length} `;
+  expiredItems = [];
+  lowStockItems = [];
+}
+
+// Filter Functionality 
 var filteredData = [];
 function filterOptions() {
-  for (var i = 0; i < 4; i++) {
+  for (var i = 0; i < 2; i++) {
     let checkStatus = document.getElementById(`check-${i}`);
-    if (checkStatus.checked === true) {        
-        //Pushing label Values of checkboxes inside filtered Data array
-        filteredData.push(checkStatus.name);
+    if (checkStatus.checked === true) {
+    //Pushing label Values of checkboxes inside filteredData array
+      filteredData.push(checkStatus.name);
     }
   }
-  getCheckedItems(orderData, filteredData);
+  getFilteredItems(filteredData);
   filteredData = [];
 }
 
-$(".check-boxes").on("change", function () { 
-  // Check the fetching data
-    filterOptions(orderData);
+// Selecting Chechbox 
+function getFilteredItems(data) {
+  if (data.length == 2) {
+    createTableRow(orderData);
+  } 
+  else if (data.length == 1) {
+    if (data[0] == "expired") {
+        var newData = getExpiredItems(orderData);
+        //Will be return only expired items
+        createTableRow(newData);
+    } 
+    else {
+        var newData = getLowStockItems(orderData); 
+        //Will be return only low stock items
+        createTableRow(newData);
+    }
+  } // Either go in else part
+  else {
+      var newData = [];
+      createTableRow(newData);
+  }
+}
+
+//Getting Low-stock Items
+var lowStockItems = [];
+function getLowStockItems(orderData) {
+  for (var i = 0; i < orderData.length; i++) {
+    if (orderData[i].stock < 100) {
+      lowStockItems.push(orderData[i]);
+    }
+  }
+  return lowStockItems;
+}
+
+//Getting Expired Items
+var expiredItems = [];
+function getExpiredItems(orderData) {
+  let today = new Date();
+  today.setHours(0, 0, 0, 0); //to have single value based on hrs,min,sec,ms
+  for (let i = 0; i < orderData.length; i++) {
+    const dateFormat = orderData[i].expiryDate;
+    
+    var varDate = new Date(dateFormat); //in dd-mm-YYYY format
+    
+    varDate.setHours(0,0,0,0); ////to have single value based on hrs,min,sec,ms
+    if (varDate < today) {
+      expiredItems.push(orderData[i]);
+    }
+  }
+  return expiredItems;
+}
+ // Selecting Checkbox
+$(".check-boxes").on("change", function () {
+  filterOptions(orderData);
 });
 
-
-function getCheckedItems(orderData, filteredData) {
-  let data = orderData;
-  var getCheckedRows = data.filter(function (store) {
-    //Returning data with orderStatus found (i.e=> >-1)
-    return filteredData.indexOf(store.orderStatus) > -1;
-  });
-  createTableRow(getCheckedRows);
-  getCheckedRows = [];
-}
-// Sign Out Functionlity 
 document.getElementById("sign-out").addEventListener("click", function () {
   localStorage.setItem("loginStatus", false);
   location.assign("./home.html");
 });
+   
+  
